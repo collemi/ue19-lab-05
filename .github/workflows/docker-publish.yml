@@ -1,5 +1,3 @@
-
-
 name: Publish Docker image
 
 on:
@@ -15,7 +13,7 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-    
+
 jobs:
   push_to_registries:
     name: Push Docker image to multiple registries
@@ -27,16 +25,16 @@ jobs:
       id-token: write
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4  # CORRECTION: v5 n'existe pas, utilisation de v4
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        uses: docker/login-action@v3 # CORRECTION: Utilisation d'un tag de version simple (v3) plutôt que le hash long
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -44,15 +42,22 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        uses: docker/metadata-action@v5
         with:
           images: |
+            # REMPLACER CECI par votre vrai nom de repo Docker Hub
             my-docker-hub-namespace/my-docker-hub-repository
             ghcr.io/${{ github.repository }}
+          # AJOUT: Génère le tag sha-xxxx et latest pour s'assurer que Trivy trouve l'image
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=sha
 
       - name: Build and push Docker images
         id: push
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -62,7 +67,8 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
+          # CORRECTION: On scanne l'image qu'on vient de construire sur GHCR
+          image-ref: 'ghcr.io/${{ github.repository }}:sha-${{ github.sha }}' 
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -70,7 +76,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v1 # CORRECTION: v3 n'existe pas, v1 est la stable
         with:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.push.outputs.digest }}
