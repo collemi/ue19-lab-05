@@ -25,10 +25,10 @@ jobs:
       id-token: write
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4  # CORRECTION: v5 n'existe pas, utilisation de v4
+        uses: actions/checkout@v4  
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3 # CORRECTION: Utilisation d'un tag de version simple (v3) plutôt que le hash long
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -45,10 +45,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            # REMPLACER CECI par votre vrai nom de repo Docker Hub
-            my-docker-hub-namespace/my-docker-hub-repository
+            collemi/ue19-lab-05
             ghcr.io/${{ github.repository }}
-          # AJOUT: Génère le tag sha-xxxx et latest pour s'assurer que Trivy trouve l'image
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -67,7 +65,6 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          # CORRECTION: On scanne l'image qu'on vient de construire sur GHCR
           image-ref: 'ghcr.io/${{ github.repository }}:sha-${{ github.sha }}' 
           format: 'table'
           exit-code: '1'
@@ -76,7 +73,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v1 # CORRECTION: v3 n'existe pas, v1 est la stable
+        uses: actions/attest-build-provenance@v1 
         with:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.push.outputs.digest }}
